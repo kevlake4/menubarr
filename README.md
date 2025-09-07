@@ -51,7 +51,7 @@
 
 Here’s menubarr showing Plex Now Playing and Recent History in the menu bar:
 
-![menubarr screenshot](FE3032D5-6656-44CB-B071-A293A26B4115.jpeg)
+![menubarr screenshot] (https://github.com/user-attachments/assets/23bbe4dd-feb8-4c99-9779-f52e2abd7f34)
 
 ---
 
