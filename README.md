@@ -1,6 +1,6 @@
 # menubarr
 
-`menubarr` is a lightweight macOS menu bar app that surfaces your Plex activity.
+`menubarr` is a lightweight macOS menu bar app that displays your Plex activity, in the menu bar.
 
 - **Now Playing** – shows what’s currently streaming from your Plex server
 - **Recent History** – displays recently played content via [Tautulli](https://tautulli.com/) integration
