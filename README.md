@@ -57,10 +57,9 @@ Here’s menubarr showing Plex Now Playing and Recent History in the menu bar:
 
 ## Roadmap
 
-- [ ] Support for multiple Plex servers
 - [ ] Artwork thumbnails for Now Playing and Recent History
-- [ ] More granular notification options
-- [ ] Adjustable refresh interval
+- [ ] Support for jellyfin
+- [ ] sabnzb & arr stack integration
 
 ---
 
