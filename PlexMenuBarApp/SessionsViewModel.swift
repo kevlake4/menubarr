@@ -23,7 +23,7 @@ final class SessionsViewModel: ObservableObject {
     @Published var lastUpdated: Date?
     @Published var isLoading = false
 
-    // Notifications (kept minimal here; wire to your NotificationManager if needed)
+    // Background polling (every 30s like before)
     private var timerCancellable: AnyCancellable?
 
     init() {
@@ -37,7 +37,7 @@ final class SessionsViewModel: ObservableObject {
         if d.object(forKey: "notifications.allowPaused")  == nil { d.set(true, forKey: "notifications.allowPaused") }
         if d.object(forKey: "notifications.minInterval")  == nil { d.set(60.0, forKey: "notifications.minInterval") }
 
-        // Optional: start polling every 30s
+        // Restore: start polling every 30 seconds
         startPolling()
     }
 

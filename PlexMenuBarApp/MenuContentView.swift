@@ -20,9 +20,8 @@ struct MenuContentView: View {
 
                     if let msg = vm.errorMessage {
                         Box { Text("⚠️  \(msg)") }
-                    } else if vm.isLoading && vm.sessions.isEmpty {
-                        Box { ProgressView("Loading Now Playing…") }
                     } else if vm.sessions.isEmpty {
+                        // No spinner: always show "No one..." when empty, even if loading
                         Box { Text("No one is playing anything right now.") }
                     } else {
                         VStack(alignment: .leading, spacing: 8) {
@@ -68,6 +67,7 @@ struct MenuContentView: View {
         }
         .padding(12)
         .frame(minWidth: 340)
+        // Refresh immediately when the menu opens
         .task {
             await vm.refresh()
         }
@@ -132,6 +132,49 @@ struct MenuContentView: View {
 
 private struct SessionRow: View {
     let metadata: Metadata
+
+    // Plex connection (for artwork)
+    @AppStorage("plex.baseURL") private var baseURL: String = ""
+    @AppStorage("plex.token")   private var token: String   = ""
+
+    // Join base + path with proper slashes
+    private func join(_ base: String, _ path: String) -> String {
+        if base.hasSuffix("/") {
+            if path.hasPrefix("/") { return base + String(path.dropFirst()) }
+            return base + path
+        } else {
+            if path.hasPrefix("/") { return base + path }
+            return base + "/" + path
+        }
+    }
+
+    /// Prefer series (grandparent) poster for episodes, then season (parent), then item.
+    private var ratingKeyForArtwork: String? {
+        let type = metadata.type?.lowercased()
+        if type == "episode" {
+            return metadata.grandparentRatingKey
+                ?? metadata.parentRatingKey
+                ?? metadata.ratingKey
+        } else {
+            return metadata.ratingKey
+        }
+    }
+
+    /// Build poster using `ratingKeyForArtwork` -> `/library/metadata/{rk}/thumb`
+    private func artworkURL(width: Int = 80, height: Int = 120) -> URL? {
+        guard !baseURL.isEmpty, !token.isEmpty, let rk = ratingKeyForArtwork else { return nil }
+
+        // IMPORTANT: pass a RELATIVE inner url to transcode
+        let innerRelative = "/library/metadata/\(rk)/thumb"
+        guard let encodedInner = innerRelative.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
+            return nil
+        }
+
+        let transcode = join(baseURL, "/photo/:/transcode")
+        let urlString = "\(transcode)?width=\(width)&height=\(height)&minSize=1&upscale=1&format=jpeg&url=\(encodedInner)&X-Plex-Token=\(token)"
+        return URL(string: urlString)
+    }
+
     var titleText: String {
         if let type = metadata.type?.lowercased(), type == "episode" {
             let show = metadata.grandparentTitle ?? ""
@@ -143,6 +186,7 @@ private struct SessionRow: View {
             return [metadata.title ?? "", metadata.year.map(String.init) ?? ""].filter { !$0.isEmpty }.joined(separator: " • ")
         }
     }
+
     var userText: String {
         let user = metadata.User?.title ?? "Unknown user"
         let dev = metadata.Player?.title ?? metadata.Player?.product ?? "Device"
@@ -151,8 +195,29 @@ private struct SessionRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "play.rectangle.fill")
-                .imageScale(.large)
+            // Poster artwork (2:3) from preferred ratingKey
+            AsyncImage(url: artworkURL()) { phase in
+                switch phase {
+                case .empty:
+                    RoundedRectangle(cornerRadius: 6)
+                        .strokeBorder(.secondary.opacity(0.25))
+                        .overlay(Image(systemName: "photo").imageScale(.medium).foregroundStyle(.secondary))
+                case .success(let image):
+                    image
+                        .resizable()
+                        .aspectRatio(2/3, contentMode: .fill)
+                        .clipped()
+                case .failure:
+                    RoundedRectangle(cornerRadius: 6)
+                        .strokeBorder(.secondary.opacity(0.25))
+                        .overlay(Image(systemName: "film").imageScale(.medium).foregroundStyle(.secondary))
+                @unknown default:
+                    Color.clear
+                }
+            }
+            .frame(width: 40, height: 60)
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+
             VStack(alignment: .leading, spacing: 2) {
                 Text(titleText).font(.subheadline).bold()
                 Text(userText).font(.caption).foregroundStyle(.secondary)
