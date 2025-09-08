@@ -50,7 +50,8 @@
 ## Screenshots
 
 Main app
-![menubarr screenshot](https://github.com/user-attachments/assets/23bbe4dd-feb8-4c99-9779-f52e2abd7f34)
+
+![menubarr screenshot](https://raw.githubusercontent.com/kevlake4/menubarr/refs/heads/main/Screenshot%202025-09-08%20at%2015.54.37.png)
 
 ---
 
