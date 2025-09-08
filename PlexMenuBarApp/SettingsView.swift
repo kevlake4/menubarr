@@ -10,126 +10,116 @@ struct SettingsView: View {
 
     // Tautulli
     @AppStorage("tautulli.baseURL") private var tautulliBaseURL: String = "http://192.168.0.43:8181"
-    @AppStorage("tautulli.apiKey")  private var tautulliKey: String     = "f21621fbc0e349d68876928e2b9807e3"
+    @AppStorage("tautulli.apiKey")  private var tautulliKey: String     = "YOUR_TAUTULLI_API_KEY"
 
     // Notifications
     @AppStorage("notifications.enabled")      private var notificationsEnabled: Bool = true
-    @AppStorage("notifications.allowPlaying") private var allowPlaying: Bool = true
-    @AppStorage("notifications.allowPaused")  private var allowPaused: Bool  = true
+    @AppStorage("notifications.allowPlaying") private var allowPlaying: Bool  = true
+    @AppStorage("notifications.allowPaused")  private var allowPaused: Bool   = true
     @AppStorage("notifications.minInterval")  private var minInterval: Double = 60
 
+    // Display
+    @AppStorage("display.showNowPlaying") private var showNowPlaying: Bool = true
+    @AppStorage("display.showHistory")    private var showHistory: Bool    = true
+
     var body: some View {
-        Form {
-            // MARK: Plex Server
-            Section(header: Text("Plex Server")) {
-                baseURLField
-                SecureField("Plex Token", text: $token)
-                HStack {
-                    Spacer()
-                    Button("Save Plex") {
-                        PlexAPI.shared.baseURL = baseURL.trimmingCharacters(in: .whitespacesAndNewlines)
-                        PlexAPI.shared.token   = token.trimmingCharacters(in: .whitespacesAndNewlines)
-                        Task { await vm.refresh() }
-                        dismiss()
-                    }
-                    .keyboardShortcut(.return, modifiers: [.command])
-                }
-            }
-
-            // MARK: Tautulli
-            Section(header: Text("Tautulli")) {
-                tautulliBaseURLField
-                SecureField("API Key", text: $tautulliKey)
-                HStack {
-                    Spacer()
-                    Button("Save Tautulli") {
-                        TautulliAPI.shared.baseURL = tautulliBaseURL.trimmingCharacters(in: .whitespacesAndNewlines)
-                        TautulliAPI.shared.apiKey  = tautulliKey.trimmingCharacters(in: .whitespacesAndNewlines)
-                        Task { await vm.refresh() }
-                        dismiss()
+        VStack(spacing: 0) {
+            Form {
+                // MARK: Plex
+                Section(header: Text("Plex")) {
+                    plexBaseURLField
+                    SecureField("Plex Token", text: $token)
+                        .textContentType(.password)
+                    HStack {
+                        Spacer()
+                        Button("Test Plex Connection") { Task { await vm.testPlex() } }
+                            .buttonStyle(.borderedProminent)
                     }
                 }
-            }
 
-            // MARK: Notifications
-            Section(header: Text("Notifications")) {
-                Toggle("Enable notifications", isOn: $notificationsEnabled)
-                    .onChange(of: notificationsEnabled) {   // ✅ new API
-                        if notificationsEnabled {
-                            NotificationManager.shared.configure()
-                        }
+                // MARK: Tautulli
+                Section(header: Text("Tautulli")) {
+                    tautulliBaseURLField
+                    SecureField("Tautulli API Key", text: $tautulliKey)
+                        .textContentType(.password)
+                    HStack {
+                        Spacer()
+                        Button("Test Tautulli Connection") { Task { await vm.testTautulli() } }
+                            .buttonStyle(.borderedProminent)
                     }
-
-                Toggle("Notify on Playing", isOn: $allowPlaying)
-                Toggle("Notify on Paused",  isOn: $allowPaused)
-
-                HStack {
-                    Text("Cooldown")
-                    Spacer()
-                    Slider(value: $minInterval, in: 5...600, step: 5)
-                        .frame(width: 180)
-                    Text("\(Int(minInterval))s")
-                        .monospacedDigit()
-                        .foregroundStyle(.secondary)
                 }
 
-                Button {
-                    NotificationManager.shared.sendTest()
-                } label: {
-                    Label("Send Test Notification", systemImage: "bell.badge")
+                // MARK: Notifications
+                Section(header: Text("Notifications")) {
+                    Toggle("Enable notifications", isOn: $notificationsEnabled)
+                    Toggle("Notify while playing", isOn: $allowPlaying)
+                    Toggle("Notify when paused", isOn: $allowPaused)
+                    HStack {
+                        Text("Minimum interval")
+                        Spacer()
+                        Slider(value: $minInterval, in: 10...600, step: 10) {
+                            Text("Minimum interval")
+                        } minimumValueLabel: { Text("10s") } maximumValueLabel: { Text("10m") }
+                    }
+                    Text("Won’t notify the same session more often than this.")
+                        .font(.caption).foregroundStyle(.secondary)
                 }
-                .buttonStyle(.bordered)
-            }
 
-            // MARK: Networking / ATS hint
-            Section(header: Text("Networking")) {
-                Text("""
-If your servers use HTTP on a LAN, add an ATS exception in Info.plist so the app can connect.
+                // MARK: Display
+                Section(header: Text("Display")) {
+                    Toggle("Show Now Playing section", isOn: $showNowPlaying)
+                    Toggle("Show Recent History section", isOn: $showHistory)
+                }
 
-<key>NSAppTransportSecurity</key>
-<dict>
-  <key>NSExceptionDomains</key>
-  <dict>
-    <key>192.168.0.43</key> <!-- Tautulli -->
-    <dict>
-      <key>NSExceptionAllowsInsecureHTTPLoads</key><true/>
-      <key>NSIncludesSubdomains</key><true/>
-    </dict>
-    <key>YOUR_PLEX_HOST</key> <!-- Plex -->
-    <dict>
-      <key>NSExceptionAllowsInsecureHTTPLoads</key><true/>
-      <key>NSIncludesSubdomains</key><true/>
-    </dict>
-  </dict>
-</dict>
+                // MARK: Networking hint
+                Section(header: Text("Networking")) {
+                    Text("""
+If your Plex or Tautulli hosts are on a local network, ensure the base URLs are reachable from this Mac. \
+If you use HTTPS with a self-signed certificate, you may need to allow it in Keychain Access.
 """)
-                .font(.system(.footnote, design: .monospaced))
-                .foregroundStyle(.secondary)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                }
             }
+
+            Divider()
+
+            HStack {
+                Button("Close") { dismiss() }
+                Spacer()
+                Button {
+                    Task {
+                        await vm.refresh(force: true)
+                        dismiss()
+                    }
+                } label: {
+                    Label("Save & Refresh", systemImage: "arrow.clockwise")
+                }
+                .keyboardShortcut(.defaultAction)
+                .buttonStyle(.borderedProminent)
+            }
+            .padding(12)
         }
-        .padding()
-        .onAppear {
-            PlexAPI.shared.baseURL = baseURL.trimmingCharacters(in: .whitespacesAndNewlines)
-            PlexAPI.shared.token   = token.trimmingCharacters(in: .whitespacesAndNewlines)
-            TautulliAPI.shared.baseURL = tautulliBaseURL.trimmingCharacters(in: .whitespacesAndNewlines)
-            TautulliAPI.shared.apiKey  = tautulliKey.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
+        .frame(width: 520, height: 640)
     }
 
-    // MARK: - Helpers for macOS 13 compatibility
+    // MARK: - Fields
+
     @ViewBuilder
-    private var baseURLField: some View {
+    private var plexBaseURLField: some View {
         if #available(macOS 14.0, *) {
-            TextField("Base URL (e.g. http://192.168.1.10:32400)", text: $baseURL).textContentType(.URL)
+            TextField("Plex Base URL (e.g. http://192.168.1.10:32400)", text: $baseURL)
+                .textContentType(.URL)
         } else {
-            TextField("Base URL (e.g. http://192.168.1.10:32400)", text: $baseURL)
+            TextField("Plex Base URL (e.g. http://192.168.1.10:32400)", text: $baseURL)
         }
     }
 
     @ViewBuilder
     private var tautulliBaseURLField: some View {
         if #available(macOS 14.0, *) {
-            TextField("Tautulli Base URL (e.g. http://192.168.0.43:8181)", text: $tautulliBaseURL).textContentType(.URL)
+            TextField("Tautulli Base URL (e.g. http://192.168.0.43:8181)", text: $tautulliBaseURL)
+                .textContentType(.URL)
         } else {
             TextField("Tautulli Base URL (e.g. http://192.168.0.43:8181)", text: $tautulliBaseURL)
         }
