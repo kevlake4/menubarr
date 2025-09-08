@@ -57,7 +57,7 @@ Main app
 
 ## Roadmap
 
-- [ ] Artwork thumbnails for Now Playing and Recent History
+- [✅] Artwork thumbnails for Now Playing and Recent History
 - [ ] Synology DSM stats (CPU/MEMORY ETC)
 - [ ] Support for jellyfin
 - [ ] sabnzb & arr stack integration
